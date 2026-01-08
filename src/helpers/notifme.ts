@@ -1,8 +1,29 @@
 import axios from "axios";
 import type { Channel } from "notifme-sdk";
 import NotifmeSdk, { EmailProvider, SlackProvider, SmsProvider } from "notifme-sdk";
+import { getConfig } from "./config";
 import { replaceEnvironmentVariables } from "./environment";
 import { getSecret } from "./secrets";
+
+interface DiscordEmbedField {
+  name: string;
+  value: string;
+  inline?: boolean;
+}
+
+interface DiscordEmbed {
+  title: string;
+  url?: string;
+  description?: string;
+  timestamp?: string;
+  color?: number;
+  fields?: DiscordEmbedField[];
+}
+
+interface DiscordWebhookPayload {
+  content?: string;
+  embeds?: DiscordEmbed[];
+}
 
 const channels: {
   email?: Channel<EmailProvider>;
@@ -163,7 +184,16 @@ const notifier = new NotifmeSdk({
   channels,
 });
 
-export const sendNotification = async (message: string) => {
+export const sendNotification = async (
+  message: string,
+  metadata?: {
+    siteName?: string;
+    siteUrl?: string;
+    responseTime?: string;
+    timestamp?: string;
+    status?: string;
+  }
+) => {
   console.log("Sending notification", message);
   message = replaceEnvironmentVariables(message);
 
@@ -220,9 +250,64 @@ export const sendNotification = async (message: string) => {
   if (getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL")) {
     console.log("Sending Discord");
     try {
-      await axios.post(getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL") as string, {
-        content: message,
-      });
+      const config = await getConfig();
+      const i18n = config.i18n || {};
+      const payload: DiscordWebhookPayload = {};
+      
+      // If metadata is provided, use embed format
+      if (metadata && metadata.siteName && metadata.siteUrl) {
+        const embed: DiscordEmbed = {
+          title: metadata.siteName || "Service Status",
+          url: metadata.siteUrl,
+          description: message,
+          timestamp: metadata.timestamp || new Date().toISOString(),
+          fields: [],
+        };
+        
+        // Add color based on status
+        if (metadata.status === "up") {
+          embed.color = 0x00ff00; // Green
+        } else if (metadata.status === "degraded") {
+          embed.color = 0xffff00; // Yellow
+        } else if (metadata.status === "down") {
+          embed.color = 0xff0000; // Red
+        }
+        
+        // Add response time field if available
+        if (metadata.responseTime) {
+          embed.fields!.push({
+            name: i18n.notificationResponseTimeLabel || i18n.responseTime || "Response Time",
+            value: `${metadata.responseTime} ${i18n.ms || "ms"}`,
+            inline: true,
+          });
+        }
+        
+        // Add status field if available
+        if (metadata.status) {
+          let statusValue = metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1);
+          // Use i18n status labels if available
+          if (metadata.status === "up" && i18n.up) {
+            statusValue = i18n.up;
+          } else if (metadata.status === "degraded" && i18n.degraded) {
+            statusValue = i18n.degraded;
+          } else if (metadata.status === "down" && i18n.down) {
+            statusValue = i18n.down;
+          }
+          
+          embed.fields!.push({
+            name: i18n.notificationStatusLabel || i18n.status || "Status",
+            value: statusValue,
+            inline: true,
+          });
+        }
+        
+        payload.embeds = [embed];
+      } else {
+        // Fallback to plain message if no metadata
+        payload.content = message;
+      }
+      
+      await axios.post(getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL") as string, payload);
       console.log("Success Discord");
     } catch (error) {
       console.log("Got an error", error);

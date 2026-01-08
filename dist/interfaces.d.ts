@@ -92,6 +92,8 @@ export interface UpptimeConfig {
         degradedPerformance?: string;
         completeOutage?: string;
         partialOutage?: string;
+        notificationStatusLabel?: string;
+        notificationResponseTimeLabel?: string;
     } & Record<string, string>;
     workflowSchedule: {
         graphs?: string;

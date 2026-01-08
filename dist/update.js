@@ -559,7 +559,13 @@ generator: Upptime <https://github.com/upptime/upptime>
                                         .replace("$EMOJI", `${config.commitPrefixStatusDown || "🟥"}`)}`
                                     : `${downmsg
                                         .replace("$STATUS", "experiencing **degraded performance**")
-                                        .replace("$EMOJI", `${config.commitPrefixStatusDegraded || "🟨"}`)}`);
+                                        .replace("$EMOJI", `${config.commitPrefixStatusDegraded || "🟨"}`)}`, {
+                                    siteName: site.name,
+                                    siteUrl: site.url,
+                                    responseTime,
+                                    timestamp: new Date().toISOString(),
+                                    status,
+                                });
                             }
                             catch (error) {
                                 console.log(error);
@@ -607,7 +613,13 @@ generator: Upptime <https://github.com/upptime/upptime>
                                 .replace("$EMOJI", `${config.commitPrefixStatusUp || "🟩"}`)
                                 .replace("$STATUS", `${issues.data[0].title.includes("degraded")
                                 ? "performance has improved"
-                                : "is back up"}`));
+                                : "is back up"}`), {
+                                siteName: site.name,
+                                siteUrl: site.url,
+                                responseTime,
+                                timestamp: new Date().toISOString(),
+                                status: "up",
+                            });
                         }
                         catch (error) {
                             console.log(error);
