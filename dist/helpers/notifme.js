@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendNotification = void 0;
 const axios_1 = __importDefault(require("axios"));
 const notifme_sdk_1 = __importDefault(require("notifme-sdk"));
+const config_1 = require("./config");
 const environment_1 = require("./environment");
 const secrets_1 = require("./secrets");
 const channels = {};
@@ -208,6 +209,8 @@ const sendNotification = async (message, metadata) => {
     if ((0, secrets_1.getSecret)("NOTIFICATION_DISCORD_WEBHOOK_URL")) {
         console.log("Sending Discord");
         try {
+            const config = await (0, config_1.getConfig)();
+            const i18n = config.i18n || {};
             const payload = {};
             // If metadata is provided, use embed format
             if (metadata && metadata.siteName && metadata.siteUrl) {
@@ -231,16 +234,27 @@ const sendNotification = async (message, metadata) => {
                 // Add response time field if available
                 if (metadata.responseTime) {
                     embed.fields.push({
-                        name: "Response Time",
-                        value: `${metadata.responseTime} ms`,
+                        name: i18n.notificationResponseTimeLabel || i18n.responseTime || "Response Time",
+                        value: `${metadata.responseTime} ${i18n.ms || "ms"}`,
                         inline: true,
                     });
                 }
                 // Add status field if available
                 if (metadata.status) {
+                    let statusValue = metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1);
+                    // Use i18n status labels if available
+                    if (metadata.status === "up" && i18n.up) {
+                        statusValue = i18n.up;
+                    }
+                    else if (metadata.status === "degraded" && i18n.degraded) {
+                        statusValue = i18n.degraded;
+                    }
+                    else if (metadata.status === "down" && i18n.down) {
+                        statusValue = i18n.down;
+                    }
                     embed.fields.push({
-                        name: "Status",
-                        value: metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1),
+                        name: i18n.notificationStatusLabel || i18n.status || "Status",
+                        value: statusValue,
                         inline: true,
                     });
                 }

@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { Channel } from "notifme-sdk";
 import NotifmeSdk, { EmailProvider, SlackProvider, SmsProvider } from "notifme-sdk";
+import { getConfig } from "./config";
 import { replaceEnvironmentVariables } from "./environment";
 import { getSecret } from "./secrets";
 
@@ -249,6 +250,8 @@ export const sendNotification = async (
   if (getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL")) {
     console.log("Sending Discord");
     try {
+      const config = await getConfig();
+      const i18n = config.i18n || {};
       const payload: DiscordWebhookPayload = {};
       
       // If metadata is provided, use embed format
@@ -273,17 +276,27 @@ export const sendNotification = async (
         // Add response time field if available
         if (metadata.responseTime) {
           embed.fields!.push({
-            name: "Response Time",
-            value: `${metadata.responseTime} ms`,
+            name: i18n.notificationResponseTimeLabel || i18n.responseTime || "Response Time",
+            value: `${metadata.responseTime} ${i18n.ms || "ms"}`,
             inline: true,
           });
         }
         
         // Add status field if available
         if (metadata.status) {
+          let statusValue = metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1);
+          // Use i18n status labels if available
+          if (metadata.status === "up" && i18n.up) {
+            statusValue = i18n.up;
+          } else if (metadata.status === "degraded" && i18n.degraded) {
+            statusValue = i18n.degraded;
+          } else if (metadata.status === "down" && i18n.down) {
+            statusValue = i18n.down;
+          }
+          
           embed.fields!.push({
-            name: "Status",
-            value: metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1),
+            name: i18n.notificationStatusLabel || i18n.status || "Status",
+            value: statusValue,
             inline: true,
           });
         }
