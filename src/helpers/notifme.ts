@@ -163,7 +163,16 @@ const notifier = new NotifmeSdk({
   channels,
 });
 
-export const sendNotification = async (message: string) => {
+export const sendNotification = async (
+  message: string,
+  metadata?: {
+    siteName?: string;
+    siteUrl?: string;
+    responseTime?: string;
+    timestamp?: string;
+    status?: string;
+  }
+) => {
   console.log("Sending notification", message);
   message = replaceEnvironmentVariables(message);
 
@@ -220,9 +229,52 @@ export const sendNotification = async (message: string) => {
   if (getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL")) {
     console.log("Sending Discord");
     try {
-      await axios.post(getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL") as string, {
-        content: message,
-      });
+      const payload: any = {};
+      
+      // If metadata is provided, use embed format
+      if (metadata && metadata.siteName && metadata.siteUrl) {
+        const embed: any = {
+          title: metadata.siteName || "Service Status",
+          url: metadata.siteUrl,
+          description: message,
+          timestamp: metadata.timestamp || new Date().toISOString(),
+          fields: [],
+        };
+        
+        // Add color based on status
+        if (metadata.status === "up") {
+          embed.color = 0x00ff00; // Green
+        } else if (metadata.status === "degraded") {
+          embed.color = 0xffff00; // Yellow
+        } else if (metadata.status === "down") {
+          embed.color = 0xff0000; // Red
+        }
+        
+        // Add response time field if available
+        if (metadata.responseTime) {
+          embed.fields.push({
+            name: "Response Time",
+            value: `${metadata.responseTime} ms`,
+            inline: true,
+          });
+        }
+        
+        // Add status field if available
+        if (metadata.status) {
+          embed.fields.push({
+            name: "Status",
+            value: metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1),
+            inline: true,
+          });
+        }
+        
+        payload.embeds = [embed];
+      } else {
+        // Fallback to plain message if no metadata
+        payload.content = message;
+      }
+      
+      await axios.post(getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL") as string, payload);
       console.log("Success Discord");
     } catch (error) {
       console.log("Got an error", error);
