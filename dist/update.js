@@ -562,9 +562,9 @@ generator: Upptime <https://github.com/upptime/upptime>
                                         .replace("$EMOJI", `${config.commitPrefixStatusDegraded || "🟨"}`)}`, {
                                     siteName: site.name,
                                     siteUrl: site.url,
-                                    responseTime: responseTime,
+                                    responseTime,
                                     timestamp: new Date().toISOString(),
-                                    status: status,
+                                    status,
                                 });
                             }
                             catch (error) {
@@ -616,7 +616,7 @@ generator: Upptime <https://github.com/upptime/upptime>
                                 : "is back up"}`), {
                                 siteName: site.name,
                                 siteUrl: site.url,
-                                responseTime: responseTime,
+                                responseTime,
                                 timestamp: new Date().toISOString(),
                                 status: "up",
                             });

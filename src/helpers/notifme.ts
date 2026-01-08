@@ -4,6 +4,26 @@ import NotifmeSdk, { EmailProvider, SlackProvider, SmsProvider } from "notifme-s
 import { replaceEnvironmentVariables } from "./environment";
 import { getSecret } from "./secrets";
 
+interface DiscordEmbedField {
+  name: string;
+  value: string;
+  inline?: boolean;
+}
+
+interface DiscordEmbed {
+  title: string;
+  url?: string;
+  description?: string;
+  timestamp?: string;
+  color?: number;
+  fields?: DiscordEmbedField[];
+}
+
+interface DiscordWebhookPayload {
+  content?: string;
+  embeds?: DiscordEmbed[];
+}
+
 const channels: {
   email?: Channel<EmailProvider>;
   sms?: Channel<SmsProvider>;
@@ -229,11 +249,11 @@ export const sendNotification = async (
   if (getSecret("NOTIFICATION_DISCORD_WEBHOOK_URL")) {
     console.log("Sending Discord");
     try {
-      const payload: any = {};
+      const payload: DiscordWebhookPayload = {};
       
       // If metadata is provided, use embed format
       if (metadata && metadata.siteName && metadata.siteUrl) {
-        const embed: any = {
+        const embed: DiscordEmbed = {
           title: metadata.siteName || "Service Status",
           url: metadata.siteUrl,
           description: message,
@@ -252,7 +272,7 @@ export const sendNotification = async (
         
         // Add response time field if available
         if (metadata.responseTime) {
-          embed.fields.push({
+          embed.fields!.push({
             name: "Response Time",
             value: `${metadata.responseTime} ms`,
             inline: true,
@@ -261,7 +281,7 @@ export const sendNotification = async (
         
         // Add status field if available
         if (metadata.status) {
-          embed.fields.push({
+          embed.fields!.push({
             name: "Status",
             value: metadata.status.charAt(0).toUpperCase() + metadata.status.slice(1),
             inline: true,

@@ -628,9 +628,9 @@ generator: Upptime <https://github.com/upptime/upptime>
                   {
                     siteName: site.name,
                     siteUrl: site.url,
-                    responseTime: responseTime,
+                    responseTime,
                     timestamp: new Date().toISOString(),
-                    status: status,
+                    status,
                   }
                 );
               } catch (error) {
@@ -695,7 +695,7 @@ generator: Upptime <https://github.com/upptime/upptime>
                 {
                   siteName: site.name,
                   siteUrl: site.url,
-                  responseTime: responseTime,
+                  responseTime,
                   timestamp: new Date().toISOString(),
                   status: "up",
                 }
