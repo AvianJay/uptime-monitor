@@ -188,10 +188,12 @@ export const sendNotification = async (
   message: string,
   metadata?: {
     siteName?: string;
+    siteSlug?: string;
     siteUrl?: string;
     responseTime?: string;
     timestamp?: string;
     status?: string;
+    issueUrl?: string;
   }
 ) => {
   console.log("Sending notification", message);
@@ -253,12 +255,13 @@ export const sendNotification = async (
       const config = await getConfig();
       const i18n = config.i18n || {};
       const payload: DiscordWebhookPayload = {};
+      const websiteUrl = getSecret("WEBSITE_URL") || "https://example.com";
       
       // If metadata is provided, use embed format
       if (metadata && metadata.siteName && metadata.siteUrl) {
         const embed: DiscordEmbed = {
           title: metadata.siteName || "Service Status",
-          url: metadata.siteUrl,
+          url: `${websiteUrl}/history/${metadata.siteSlug || ""}`,
           description: message,
           timestamp: metadata.timestamp || new Date().toISOString(),
           fields: [],
