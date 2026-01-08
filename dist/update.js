@@ -561,10 +561,12 @@ generator: Upptime <https://github.com/upptime/upptime>
                                         .replace("$STATUS", "experiencing **degraded performance**")
                                         .replace("$EMOJI", `${config.commitPrefixStatusDegraded || "🟨"}`)}`, {
                                     siteName: site.name,
+                                    siteSlug: slug,
                                     siteUrl: site.url,
                                     responseTime,
                                     timestamp: new Date().toISOString(),
                                     status,
+                                    issueUrl: newIssue.data.html_url,
                                 });
                             }
                             catch (error) {

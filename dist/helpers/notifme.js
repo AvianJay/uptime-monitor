@@ -212,11 +212,12 @@ const sendNotification = async (message, metadata) => {
             const config = await (0, config_1.getConfig)();
             const i18n = config.i18n || {};
             const payload = {};
+            const websiteUrl = (0, secrets_1.getSecret)("WEBSITE_URL") || "https://example.com";
             // If metadata is provided, use embed format
             if (metadata && metadata.siteName && metadata.siteUrl) {
                 const embed = {
                     title: metadata.siteName || "Service Status",
-                    url: metadata.siteUrl,
+                    url: `${websiteUrl}/history/${metadata.siteSlug || ""}`,
                     description: message,
                     timestamp: metadata.timestamp || new Date().toISOString(),
                     fields: [],
