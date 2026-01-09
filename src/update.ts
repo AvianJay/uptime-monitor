@@ -696,6 +696,7 @@ generator: Upptime <https://github.com/upptime/upptime>
                   ),
                 {
                   siteName: site.name,
+                  siteSlug: slug,
                   siteUrl: site.url,
                   responseTime,
                   timestamp: new Date().toISOString(),
