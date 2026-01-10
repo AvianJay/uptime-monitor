@@ -567,6 +567,7 @@ generator: Upptime <https://github.com/upptime/upptime>
                                     timestamp: new Date().toISOString(),
                                     status,
                                     issueUrl: newIssue.data.html_url,
+                                    issueNumber: newIssue.data.number,
                                 });
                             }
                             catch (error) {
@@ -617,6 +618,7 @@ generator: Upptime <https://github.com/upptime/upptime>
                                 ? "performance has improved"
                                 : "is back up"}`), {
                                 siteName: site.name,
+                                siteSlug: slug,
                                 siteUrl: site.url,
                                 responseTime,
                                 timestamp: new Date().toISOString(),
