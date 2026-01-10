@@ -633,6 +633,7 @@ generator: Upptime <https://github.com/upptime/upptime>
                     timestamp: new Date().toISOString(),
                     status,
                     issueUrl: newIssue.data.html_url,
+                    issueNumber: newIssue.data.number,
                   }
                 );
               } catch (error) {

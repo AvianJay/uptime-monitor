@@ -194,6 +194,7 @@ export const sendNotification = async (
     timestamp?: string;
     status?: string;
     issueUrl?: string;
+    issueNumber?: number;
   }
 ) => {
   console.log("Sending notification", message);
@@ -255,17 +256,20 @@ export const sendNotification = async (
       const config = await getConfig();
       const i18n = config.i18n || {};
       const payload: DiscordWebhookPayload = {};
-      const websiteUrl = getSecret("WEBSITE_URL") || "https://example.com";
+      const websiteUrl = getSecret("WEBSITE_URL");
       
       // If metadata is provided, use embed format
       if (metadata && metadata.siteName && metadata.siteUrl) {
         const embed: DiscordEmbed = {
           title: metadata.siteName || "Service Status",
-          url: `${websiteUrl}/history/${metadata.siteSlug || ""}`,
           description: message,
           timestamp: metadata.timestamp || new Date().toISOString(),
           fields: [],
         };
+
+        if (websiteUrl && metadata.issueNumber) {
+          embed.url = `${websiteUrl.replace(/\/+$/, "")}/incident/${metadata.issueNumber}`;
+        }
         
         // Add color based on status
         if (metadata.status === "up") {
@@ -301,6 +305,22 @@ export const sendNotification = async (
             name: i18n.notificationStatusLabel || i18n.status || "Status",
             value: statusValue,
             inline: true,
+          });
+        }
+
+        let links = [];
+        if (websiteUrl && metadata.siteSlug) {
+          links.push(`[${i18n.viewHistory || "View History"}](${websiteUrl.replace(/\/+$/, "")}/history/${metadata.siteSlug})`);
+        }
+        if (metadata.issueUrl) {
+          links.push(`[${i18n.viewIncident || "GitHub Issue"}](${metadata.issueUrl})`);
+        }
+        
+        if (links.length > 0) {
+          embed.fields!.push({
+            name: i18n.notificationLinksLabel || i18n.links || "Links",
+            value: links.join(" | "),
+            inline: false,
           });
         }
         
