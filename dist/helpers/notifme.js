@@ -266,7 +266,7 @@ const sendNotification = async (message, metadata) => {
                     links.push(`[${i18n.viewHistory || "View History"}](${websiteUrl.replace(/\/+$/, "")}/history/${metadata.siteSlug})`);
                 }
                 if (metadata.issueUrl) {
-                    links.push(`[${i18n.viewIncident || "GitHub Issue"}](${metadata.issueUrl})`);
+                    links.push(`[${i18n.githubIssue || i18n.viewIncident || "GitHub Issue"}](${metadata.issueUrl})`);
                 }
                 if (links.length > 0) {
                     embed.fields.push({
