@@ -1,57 +1,83 @@
-import { Curl, CurlFeature } from "node-libcurl";
+import axios, { AxiosRequestConfig } from "axios";
+import https from "https";
 import { UpptimeConfig } from "../interfaces";
 import { replaceEnvironmentVariables } from "./environment";
 
+const parseHeaders = (headers: string[] = []) =>
+  headers.reduce((result, header) => {
+    const separatorIndex = header.indexOf(":");
+    if (separatorIndex === -1) return result;
+
+    const name = header.substring(0, separatorIndex).trim();
+    const value = replaceEnvironmentVariables(header.substring(separatorIndex + 1).trimStart());
+
+    if (name) result[name] = value;
+    return result;
+  }, {} as Record<string, string>);
+
 export const curl = (
   site: UpptimeConfig["sites"][0]
-): Promise<{ httpCode: number; totalTime: number; data: string }> =>
-  new Promise((resolve) => {
-    const url = replaceEnvironmentVariables(site.url);
-    const method = site.method || "GET";
-    const maxRedirects = Number.isInteger(site.maxRedirects) ? Number(site.maxRedirects) : 3;
-    const curl = new Curl();
-    curl.enable(CurlFeature.Raw);
-    curl.setOpt("URL", url);
-    if (site.headers)
-      curl.setOpt(Curl.option.HTTPHEADER, site.headers.map(replaceEnvironmentVariables));
-    if (site.body) curl.setOpt("POSTFIELDS", replaceEnvironmentVariables(site.body));
-    if (site.__dangerous__insecure || site.__dangerous__disable_verify_peer)
-      curl.setOpt("SSL_VERIFYPEER", false);
-    if (site.__dangerous__insecure || site.__dangerous__disable_verify_host)
-      curl.setOpt("SSL_VERIFYHOST", false);
-    curl.setOpt("FOLLOWLOCATION", maxRedirects ? 1 : 0);
-    curl.setOpt("MAXREDIRS", maxRedirects);
-    curl.setOpt("USERAGENT", "upptime.js.org");
-    curl.setOpt("CONNECTTIMEOUT", 10);
-    curl.setOpt("TIMEOUT", 30);
-    curl.setOpt("HEADER", 1);
+): Promise<{ httpCode: number; totalTime: number; data: string }> => {
+  const url = replaceEnvironmentVariables(site.url);
+  const method = site.method || "GET";
+  const maxRedirects = Number.isInteger(site.maxRedirects) ? Number(site.maxRedirects) : 3;
+  const headers = parseHeaders(site.headers);
+  const shouldDisableTlsVerification =
+    site.__dangerous__insecure ||
+    site.__dangerous__disable_verify_peer ||
+    site.__dangerous__disable_verify_host;
 
-    if (site.verbose) {
-      curl.setOpt("VERBOSE", true);
-    } else {
-      curl.setOpt("VERBOSE", false);
-    }
+  const config: AxiosRequestConfig = {
+    url,
+    method: method as AxiosRequestConfig["method"],
+    data: site.body ? replaceEnvironmentVariables(site.body) : undefined,
+    headers: {
+      ...headers,
+      "User-Agent": headers["User-Agent"] || headers["user-agent"] || "upptime.js.org",
+    },
+    maxRedirects,
+    timeout: 30000,
+    responseType: "text",
+    transformResponse: [(data) => data],
+    validateStatus: () => true,
+    httpsAgent: shouldDisableTlsVerification
+      ? new https.Agent({ rejectUnauthorized: false })
+      : undefined,
+  };
 
-    curl.setOpt("CUSTOMREQUEST", method);
-    curl.on("error", (error) => {
-      curl.close();
-      console.log("Got an error (on error)", error);
-      return resolve({ httpCode: 0, totalTime: 0, data: "" });
+  if (site.verbose) {
+    console.log("HTTP request", {
+      url,
+      method,
+      maxRedirects,
+      insecure: Boolean(shouldDisableTlsVerification),
     });
-    curl.on("end", (_, data) => {
-      if (typeof data !== "string") data = data.toString();
-      let httpCode = 0;
-      let totalTime = 0;
-      try {
-        httpCode = Number(curl.getInfo("RESPONSE_CODE"));
-        totalTime = Number(curl.getInfo("TOTAL_TIME"));
-      } catch (error) {
-        curl.close();
-        console.log("Got an error (on end)", error);
-        return resolve({ httpCode, totalTime, data });
+  }
+
+  const startedAt = performance.now();
+
+  return axios(config)
+    .then((response) => {
+      const totalTime = (performance.now() - startedAt) / 1000;
+      const data =
+        typeof response.data === "string"
+          ? response.data
+          : response.data === undefined || response.data === null
+          ? ""
+          : String(response.data);
+
+      if (site.verbose) {
+        console.log("HTTP response", {
+          url,
+          status: response.status,
+          totalTime,
+        });
       }
-      if (httpCode === 0 || totalTime === 0) console.log("Didn't get an error but got 0s");
-      return resolve({ httpCode, totalTime, data });
+
+      return { httpCode: Number(response.status), totalTime, data };
+    })
+    .catch((error) => {
+      console.log("Got an error (axios)", error);
+      return { httpCode: 0, totalTime: 0, data: "" };
     });
-    curl.perform();
-  });
+};
